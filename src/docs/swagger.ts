@@ -3,10 +3,12 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import type { Express } from 'express';
 import path from 'path';
+import fs from 'fs';
 
 export function mountSwagger(app: Express) {
-  const apisGlob = path.resolve(__dirname, '../routes/*.ts'); // ← penting
-
+  const routesPath = fs.existsSync(path.join(__dirname, '../routes'))
+    ? path.join(__dirname, '../routes/*.js') // production build
+    : path.join(__dirname, '../../src/routes/*.ts'); // dev mode
   const swaggerSpec = swaggerJSDoc({
     definition: {
       openapi: '3.0.0',
@@ -79,7 +81,7 @@ export function mountSwagger(app: Express) {
         },
       },
     },
-    apis: [apisGlob],
+    apis: [routesPath],
   });
 
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
