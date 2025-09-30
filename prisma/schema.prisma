@@ -1,0 +1,59 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  // optional:
+  // output = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int             @id @default(autoincrement())
+  email         String          @unique
+  password      String
+  name          String?
+  iklan         Iklan[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  PasswordReset PasswordReset[]
+}
+
+model PasswordReset {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique // token sekali pakai
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  expiresAt DateTime? // TEST MODE: nullable (tidak expired)
+  used      Boolean   @default(false) // tandai sudah dipakai
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Iklan {
+  id        Int     @id @default(autoincrement())
+  title     String
+  body      String
+  price     Int
+  published Boolean @default(true)
+
+  addressLine   String?
+  city          String?
+  province      String?
+  postalCode    String?
+  areaSqm       Int?
+  rooms         Int?
+  bathrooms     Int?
+  facilitiesCsv String?
+
+  ownerId Int
+  owner   User @relation(fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
