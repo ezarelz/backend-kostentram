@@ -1,19 +1,23 @@
 // src/docs/swagger.ts
-import swaggerUi from 'swagger-ui-express';
+import swaggerUi, { SwaggerUiOptions } from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 import type { Express } from 'express';
 import path from 'path';
 import fs from 'fs';
 
 export function mountSwagger(app: Express) {
-  const routesPath = fs.existsSync(path.join(__dirname, '../routes'))
-    ? path.join(__dirname, '../routes/*.js') // production build
-    : path.join(__dirname, '../../src/routes/*.ts'); // dev mode
+  // Pakai folder routes di build (dist) kalau ada, kalau tidak pakai src
+  const prodRoutesDir = path.join(__dirname, '../routes');
+  const apis = fs.existsSync(prodRoutesDir)
+    ? [path.join(prodRoutesDir, '*.js')] // production (dist)
+    : [path.join(__dirname, '../../src/routes/*.ts')]; // development (ts-node)
+
   const swaggerSpec = swaggerJSDoc({
     definition: {
       openapi: '3.0.0',
       info: { title: 'Kostentram API', version: '1.0.0' },
-      servers: [{ url: `http://localhost:${process.env.PORT || 4000}` }],
+      // Relative base URL → otomatis mengikuti domain/host saat diakses
+      servers: [{ url: '/' }],
       components: {
         securitySchemes: {
           BearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
@@ -36,7 +40,6 @@ export function mountSwagger(app: Express) {
               password: { type: 'string', minLength: 6 },
             },
           },
-
           PasswordForgot: {
             type: 'object',
             required: ['email'],
@@ -52,7 +55,6 @@ export function mountSwagger(app: Express) {
               newPassword: { type: 'string', minLength: 6 },
             },
           },
-
           IklanCreate: {
             type: 'object',
             required: ['title', 'body', 'price'],
@@ -81,8 +83,16 @@ export function mountSwagger(app: Express) {
         },
       },
     },
-    apis: [routesPath],
+    apis,
   });
 
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  // Opsi resmi Swagger UI → hindari "no overload matches"
+  const uiOptions: SwaggerUiOptions = {
+    explorer: false,
+    swaggerOptions: {
+      persistAuthorization: true, // simpan Bearer token di UI
+    },
+  };
+
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, uiOptions));
 }
